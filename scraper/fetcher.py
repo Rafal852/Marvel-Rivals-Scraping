@@ -19,15 +19,16 @@ class HTMLFetcher:
             # Wait for the page to load
             time.sleep(2)
 
-            # Select the season filter
-            season_dropdown = Select(driver.find_element(By.ID, "season_filter"))
-            season_dropdown.select_by_value(season)
+            # Handle the "Heroes" page with the season filter
+            if "heroes" in url:
+                season_dropdown = Select(driver.find_element(By.ID, "season_filter"))
+                season_dropdown.select_by_value(season)
 
-            # Select the rank filter
+            # Select the rank filter for both pages
             rank_dropdown = driver.find_element(By.CLASS_NAME, "rank-selector")
             rank_dropdown.click()
 
-            # Click on the rank options to select a rank
+            # Click on the rank options to select the rank
             rank_option = driver.find_element(By.XPATH, f"//span[text()='{rank}']")
             rank_option.click()
 

@@ -1,32 +1,44 @@
 from scraper.fetcher import HTMLFetcher
 from scraper.parser import HeroesParser
 from scraper.parser import TeamUpParser
+from scraper.parser import TeamCompParser
 from scraper.saver import CSVWriter
 
+from scraper.parser import TeamCompParser  # Import the new parser
+
+# Add TeamCompParser to the function
 def main():
-    url = "https://rivalstracker.com/heroes"
+    url_heroes = "https://rivalstracker.com/heroes"
+    url_team_comps = "https://rivalstracker.com/team-comps"  # URL for Team Comps
     seasons = ["season0", "1"]
     ranks = ["All Ranks", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Grandmaster", "Celestial", "Eternity", "One Above All"]
 
     all_heroes_data = []
     all_teamups_data = []
+    all_team_comps_data = []  # To store Team Comp data
 
-    fetcher = HTMLFetcher()  # Instance of HTMLFetcher
-    heroes_parser = HeroesParser()  # Instance of HeroesParser
-    teamup_parser = TeamUpParser()# Instance of TeamUpParser
+    fetcher = HTMLFetcher()
+    heroes_parser = HeroesParser()
+    teamup_parser = TeamUpParser()
+    teamcomp_parser = TeamCompParser()  # Initialize the TeamCompParser
 
     for season in seasons:
         for rank in ranks:
             print(f"Scraping data for Season: {season}, Rank: {rank}")
-            html = fetcher.fetch_html(url, season, rank)
+            html_heroes = fetcher.fetch_html(url_heroes, season, rank)
+            html_team_comps = fetcher.fetch_html(url_team_comps, season, rank)
 
             # Parsing Hero Data
-            heroes = heroes_parser.parse_heroes_tab(html, season, rank)
+            heroes = heroes_parser.parse_heroes_tab(html_heroes, season, rank)
             all_heroes_data.extend(heroes)
 
             # Parsing Team-Ups Data
-            teamups = teamup_parser.parse_teamups_tab(html, season, rank)
+            teamups = teamup_parser.parse_teamups_tab(html_heroes, season, rank)
             all_teamups_data.extend(teamups)
+
+            # Parsing Team Comps Data
+            team_comps = teamcomp_parser.parse_team_comps(html_team_comps, rank)
+            all_team_comps_data.extend(team_comps)
 
     csv_writer = CSVWriter()
 
@@ -46,5 +58,14 @@ def main():
     )
     print("Team-Ups data saved!")
 
+    # Saving Team Comps Data
+    csv_writer.save_to_csv(
+        "team_comps_data_all_seasons_ranks.csv",
+        all_team_comps_data,
+        ["Team Comp", "Win Rate", "Pick Rate", "Matches", "Rank"],
+    )
+    print("Team Comps data saved!")
+
 if __name__ == "__main__":
     main()
+	
