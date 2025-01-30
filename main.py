@@ -46,7 +46,7 @@ def main():
     csv_writer.save_to_csv(
         "heroes_data_all_seasons_ranks.csv",
         all_heroes_data,
-        ["Hero", "Tier", "Win Rate", "WR Change", "Pick Rate", "PR Change", "Ban Rate", "Matches", "Rank", "Season"],
+        ["Hero", "Role", "Tier", "Win Rate", "WR Change", "Pick Rate", "PR Change", "Ban Rate", "Matches", "Rank", "Season"],
     )
     print("Heroes data saved!")
 

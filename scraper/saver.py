@@ -6,3 +6,4 @@ class CSVWriter:
             writer = csv.writer(file)
             writer.writerow(headers)
             writer.writerows(data)
+			
