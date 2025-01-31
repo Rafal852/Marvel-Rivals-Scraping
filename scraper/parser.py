@@ -1,10 +1,11 @@
 from bs4 import BeautifulSoup
 import re
+from collections import defaultdict
 
 def safe_float(value):
     # Handle 'N/A', strip out unwanted characters, and convert to a float
     if 'W' in value:
-        value = value.split('%')[0]  # Remove the win count part after %
+        value = value.split('%')[0]
     return float(value.replace('%', '').replace('N/A', '0').strip()) / 100 if value not in ('N/A', '') else 0
 
 
@@ -25,12 +26,11 @@ class HeroesParser:
                 
                 if role_img and "src" in role_img.attrs:
                     src = role_img["src"]
-                    print(f"Role Image Src for {name}: {src}")  # Debugging line
+                    print(f"Role Image Src for {name}: {src}")  
 
                     if src.startswith("data:image/png;base64,"):
                         base64_data = src.split(",")[1]  # Extract base64 part
                         
-                        # Directly check the base64 string and assign role
                         if "iVBORw0KGgoAAAANSUhEUgAAABoAAAAWCAMAAADpVnyHAAAAKlBMVEUYGidMaXEWGCQXGSUWGCQVGCMXGSUXGSUXGSUWGCUXGSUVFyMXGSUWFhYOTH96AAAADnRSTlP+AF3nRzOZ9sWF1x+wDfagzcwAAAAJcEhZcwAACxMAAAsTAQCanBgAAADZSURBVHicbZJbcsQgDAQbSQjx8P2vmxJ47a0k/KH24BkGyveSuN4N36QqUf9FdQDyL+o03NT+oEukE6aP8EaXec7cB6jIFxIlV6tOQxx/Ud8Exlz0/csHWUoajaien+0zD6qpkPTukmpZbd7oymkvjksDImB9HMY2UWZ6hwZqH+Q5WaWkKKnWJ9exaHmN6SPJQVPSIsS0UqYeslEdIy2msxjdLM4tss9v1WMoxMoUdy+UE2RWs7lQGuuu80Y0hm2bPEV/ECqZDXS+VR6kfWTSHeA3OrXQ32fzA/IpBTzpneDQAAAAAElFTkSuQmCC" in base64_data:
                             role = "Duelist"
                         elif "iVBORw0KGgoAAAANSUhEUgAAABoAAAAWCAMAAADpVnyHAAAAKlBMVEVMaXEXGSUVFyQWGCMXGSUXGSUWFyQXGCUWGCUXGSYXGSUXGSUXGSUYGicV9gYgAAAADXRSTlMA3y4UyO1Fj3z3taBtotKEggAAAAlwSFlzAAALEwAACxMBAJqcGAAAAN9JREFUeJyFke2OBSEIQ1FARD3v/7obZ5z7kc1m+SUpLaWK/FP6Z1tL/UTaq9WItE/IMuLh4G3OM1nnbM7NW2WyFmS7xIDVibK2XDIaZvQNdazQBhkqQeLRqzE3NLHaw0m6VMMZW8guC9Bk4FgVUcumNaCoiDpE1ZZ23dZsuBeSJRJAcR92eRLRyS5THdcD5juPasnYB94zX9lIH7IOZf2K+FaFk9FHwkYCydBvOWl+OEX7ndhr0wHwWpM7stv84/lOAhjH/OOZPX5snk/Z68+lUp+duUR6llNuKuFPl/0HCkcLeZoYNQ0AAAAASUVORK5CYII=" in base64_data:
@@ -53,8 +53,6 @@ class HeroesParser:
 
         return heroes_data
 
-
-
 class TeamUpParser:
     def parse_teamups_tab(self, html, season, rank):
         soup = BeautifulSoup(html, 'html.parser')
@@ -68,12 +66,10 @@ class TeamUpParser:
             if len(columns) >= 4:
                 heroes = [img["alt"].strip() for img in row.select(".heroes_teamups img")]
 
-                # Skip if no heroes found
                 if not heroes:
                     print("No heroes found in this row, skipping.")
                     continue
                 
-                # Extract data for the team-up
                 team = ", ".join(heroes)
                 tier = columns[1].text.strip()
                 win_rate = safe_float(columns[2].text.strip())
@@ -85,7 +81,7 @@ class TeamUpParser:
 
         print(f"Found {len(teamups_data)} valid team-ups")
         return teamups_data
-
+    
 class TeamCompParser:
     def parse_team_comps(self, html, rank):
         soup = BeautifulSoup(html, 'html.parser')
@@ -95,13 +91,26 @@ class TeamCompParser:
             columns = row.find_all("td")
             if len(columns) >= 4:
                 team_comp = columns[0].text.strip()
-                components = team_comp.split(", ")  # Split the team comp into components
-                # Correctly extract and process win rate and pick rate
-                win_rate = safe_float(columns[1].text.strip())  # Convert to float
-                pick_rate = safe_float(columns[2].text.strip())  # Convert to float
-                matches = columns[3].text.strip()
 
-                if components and win_rate is not None and pick_rate is not None and matches:
-                    team_comps_data.append(components + [win_rate, pick_rate, matches, rank])
+                # Extract class numbers and names
+                components = re.findall(r'(\d+)([A-Za-z]+)', team_comp)
+                trait_counts = defaultdict(int)
+
+                for num, name in components:
+                    trait_counts[name] = int(num)
+                
+                # Standardized order: Duelist, Strategist, Vanguard
+                duelist = trait_counts.get("Duelist", 0)
+                strategist = trait_counts.get("Strategist", 0)
+                vanguard = trait_counts.get("Vanguard", 0)
+
+                win_rate = safe_float(columns[1].text.strip())
+                pick_rate = safe_float(columns[2].text.strip())
+
+                # Remove commas from matches count
+                matches = int(columns[3].text.strip().replace(",", ""))
+
+                if win_rate is not None and pick_rate is not None:
+                    team_comps_data.append([duelist, strategist, vanguard, win_rate, pick_rate, matches, rank])
 
         return team_comps_data

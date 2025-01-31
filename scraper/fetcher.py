@@ -21,9 +21,41 @@ class HTMLFetcher:
 
         try:
             driver.get(url)
-
-            # Wait for the page to load (you can adjust the sleep time if necessary)
             time.sleep(2)
+
+            # Handle possible consent popup
+            try:
+                # Switch to the iframe if it exists
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, "//iframe[contains(@title, 'Consent')]"))
+                )
+                consent_iframe = driver.find_element(By.XPATH, "//iframe[contains(@title, 'Consent')]")
+                driver.switch_to.frame(consent_iframe)
+                
+                # Click the "Accept" or "Reject" button (adjust selector based on site)
+                try:
+                    accept_button = WebDriverWait(driver, 3).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]"))
+                    )
+                    accept_button.click()
+                except:
+                    reject_button = WebDriverWait(driver, 3).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Reject')]"))
+                    )
+                    reject_button.click()
+                
+                driver.switch_to.default_content()  # Switch back to the main page
+                time.sleep(1)
+                
+            except Exception as e:
+                print(f"No consent popup found or failed to close it: {e}")
+
+            # Remove iframe (if still causing issues)
+            driver.execute_script("""
+                var iframe = document.querySelector("iframe[src*='privacy-mgmt']");
+                if (iframe) iframe.remove();
+            """)
+            time.sleep(1)
 
             # Handle the "Heroes" page with the season filter
             if "heroes" in url:
@@ -33,32 +65,20 @@ class HTMLFetcher:
                 except Exception as e:
                     print(f"Error selecting season filter: {e}")
 
-            # Select the rank filter for both pages
+            # Select the rank filter
             try:
-                # Wait for the rank dropdown to be present
                 WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "rank-selector"))
-                )
+                    EC.element_to_be_clickable((By.CLASS_NAME, "rank-selector"))
+                ).click()
 
-                rank_dropdown = driver.find_element(By.CLASS_NAME, "rank-selector")
-                rank_dropdown.click()
-
-                # Wait for the rank option to be clickable
                 WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.XPATH, f"//span[text()='{rank}']"))
-                )
-
-                # Click on the rank option
-                rank_option = driver.find_element(By.XPATH, f"//span[text()='{rank}']")
-                rank_option.click()
+                ).click()
 
             except Exception as e:
                 print(f"Error selecting rank filter: {e}")
 
-            # Wait a few seconds to let the page reload the stats
             time.sleep(2)
-
-            # Fetch the HTML content
             return driver.page_source
 
         except Exception as e:
